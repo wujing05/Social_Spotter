@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Spotter</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #21262d;
+      --border:    #30363d;
+      --accent:    #58a6ff;
+      --accent2:   #3fb950;
+      --danger:    #f85149;
+      --warn:      #d29922;
+      --text:      #e6edf3;
+      --text-muted:#8b949e;
+      --yt:        #ff4e45;
+      --x:         #e7e9ea;
+      --radius:    10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #161b22 0%, #1c2333 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo svg { flex-shrink: 0; }
+    .tagline {
+      margin-top: 6px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ── Search panel ── */
+    .search-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #keyword {
+      flex: 1;
+      min-width: 200px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    #keyword:focus { border-color: var(--accent); }
+    #keyword::placeholder { color: var(--text-muted); }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-primary:hover:not(:disabled) { opacity: .87; }
+    .btn-success { background: var(--accent2); color: #0d1117; }
+    .btn-success:hover:not(:disabled) { opacity: .87; }
+
+    .platform-row {
+      display: flex;
+      gap: 18px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      user-select: none;
+    }
+    .checkbox-label input[type=checkbox] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+    .checkbox-label:has(input:checked) { color: var(--text); }
+
+    /* ── Status / errors ── */
+    #status-area { margin-bottom: 18px; }
+
+    .alert {
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .alert-error   { background: rgba(248,81,73,.12); border: 1px solid rgba(248,81,73,.35); color: #ffa198; }
+    .alert-warn    { background: rgba(210,153,34,.12); border: 1px solid rgba(210,153,34,.35); color: #e3b341; }
+    .alert-info    { background: rgba(88,166,255,.1);  border: 1px solid rgba(88,166,255,.3);  color: #79c0ff; }
+
+    /* ── Spinner ── */
+    .spinner-wrap { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: .9rem; padding: 6px 0; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results header ── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .results-count {
+      font-size: .9rem;
+      color: var(--text-muted);
+    }
+    .results-count strong { color: var(--text); }
+
+    /* ── Cards grid ── */
+    #results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color .15s, transform .15s;
+    }
+    .card:hover {
+      border-color: #484f58;
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .platform-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .badge-yt { background: rgba(255,78,69,.18); color: var(--yt); }
+    .badge-x  { background: rgba(231,233,234,.12); color: var(--x); }
+
+    .card-title {
+      font-size: .875rem;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: auto;
+    }
+    .metric {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .78rem;
+      color: var(--text-muted);
+    }
+    .metric svg { flex-shrink: 0; }
+
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .8rem;
+      color: var(--accent);
+      margin-top: 2px;
+    }
+    .card-date {
+      font-size: .75rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Analyze section ── */
+    #analyze-section {
+      margin-bottom: 28px;
+      display: none;
+    }
+    #analyze-section.visible { display: block; }
+
+    /* ── Analysis output ── */
+    #analysis-output {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: none;
+    }
+    #analysis-output.visible { display: block; }
+
+    .analysis-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent2);
+    }
+
+    .analysis-body {
+      font-size: .9rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+    .analysis-body h3 {
+      color: var(--accent);
+      margin: 16px 0 6px;
+      font-size: .95rem;
+    }
+    .analysis-body ul {
+      padding-left: 18px;
+    }
+    .analysis-body li {
+      margin-bottom: 4px;
+    }
+
+    /* ── CORS note ── */
+    .cors-note {
+      background: rgba(210,153,34,.08);
+      border: 1px solid rgba(210,153,34,.25);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: .82rem;
+      color: #e3b341;
+      margin-top: 14px;
+      line-height: 1.55;
+    }
+    .cors-note strong { display: block; margin-bottom: 4px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: .8rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     CONFIG — paste your API keys here
+══════════════════════════════════════════ -->
+<script>
+const CONFIG = {
+  YOUTUBE_API_KEY:  '',   // YouTube Data API v3
+  X_BEARER_TOKEN:   '',   // X (Twitter) API v2 Bearer Token
+  ANTHROPIC_API_KEY:'',   // Anthropic API key
+};
+</script>
+<!-- ══════════════════════════════════════════ -->
+
+<header>
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" stroke="#58a6ff" stroke-width="2"/>
+      <circle cx="16" cy="16" r="6" fill="#58a6ff" opacity=".25"/>
+      <circle cx="16" cy="16" r="3" fill="#58a6ff"/>
+      <line x1="16" y1="1" x2="16" y2="7"  stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16" y1="25" x2="16" y2="31" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/>
+      <line x1="1"  y1="16" x2="7"  y2="16" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/>
+      <line x1="25" y1="16" x2="31" y2="16" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    Social Spotter
+  </div>
+  <p class="tagline">Discover trending content across YouTube &amp; X · powered by Claude AI</p>
+</header>
+
+<main>
+
+  <!-- Search panel -->
+  <section class="search-panel">
+    <div class="search-row">
+      <input id="keyword" type="text" placeholder='Enter a keyword, e.g. "AI marketing"' autocomplete="off" />
+      <button class="btn btn-primary" id="search-btn" onclick="handleSearch()">
+        <span id="search-label">Search</span>
+      </button>
+    </div>
+    <div class="platform-row">
+      <label class="checkbox-label">
+        <input type="checkbox" id="chk-yt" checked />
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff4e45"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.75 15.5v-7l6.25 3.5-6.25 3.5z"/></svg>
+        YouTube
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="chk-x" checked />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#e7e9ea"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        X / Twitter
+      </label>
+    </div>
+    <div class="cors-note">
+      <strong>⚠ Browser CORS limitations</strong>
+      The X API v2 and Anthropic API block direct browser requests. For those calls, this app uses
+      public CORS proxies (<code>api.allorigins.win</code> / <code>corsproxy.io</code>).
+      For production use, route these through your own backend or a serverless function.
+    </div>
+  </section>
+
+  <!-- Status messages -->
+  <div id="status-area"></div>
+
+  <!-- Results header + grid -->
+  <div id="results-section" style="display:none">
+    <div class="results-header">
+      <span class="results-count" id="results-count"></span>
+    </div>
+    <div id="results-grid"></div>
+  </div>
+
+  <!-- Analyze button -->
+  <div id="analyze-section">
+    <button class="btn btn-success" id="analyze-btn" onclick="handleAnalyze()">
+      ✦ Analyze Trends with Claude
+    </button>
+  </div>
+
+  <!-- Analysis output -->
+  <div id="analysis-output">
+    <div class="analysis-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      AI Marketing Insights
+    </div>
+    <div class="analysis-body" id="analysis-body"></div>
+  </div>
+
+</main>
+
+<footer>Social Spotter · built with YouTube Data API v3, X API v2 &amp; Claude AI</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let collectedPosts = [];
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function setStatus(html) {
+  document.getElementById('status-area').innerHTML = html;
+}
+function clearStatus() { setStatus(''); }
+
+function spinner(msg) {
+  return `<div class="spinner-wrap"><div class="spinner"></div><span>${msg}</span></div>`;
+}
+
+function alert(type, msg) {
+  return `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  n = Number(n);
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return String(n);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return ''; }
+}
+
+// Naive markdown → HTML (headings, bold, bullets)
+function simpleMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^[•\-] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
+}
+
+// ─────────────────────────────────────────────
+// YouTube
+// ─────────────────────────────────────────────
+async function fetchYouTube(keyword) {
+  if (!CONFIG.YOUTUBE_API_KEY) throw new Error('YouTube API key not set in CONFIG.');
+
+  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+  searchUrl.searchParams.set('part', 'snippet');
+  searchUrl.searchParams.set('q', keyword);
+  searchUrl.searchParams.set('type', 'video');
+  searchUrl.searchParams.set('order', 'relevance');
+  searchUrl.searchParams.set('maxResults', '10');
+  searchUrl.searchParams.set('key', CONFIG.YOUTUBE_API_KEY);
+
+  const searchRes = await fetch(searchUrl);
+  if (!searchRes.ok) {
+    const err = await searchRes.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `YouTube search failed (${searchRes.status})`);
+  }
+  const searchData = await searchRes.json();
+  const items = searchData.items || [];
+  if (!items.length) return [];
+
+  const ids = items.map(i => i.id.videoId).join(',');
+  const statsUrl = new URL('https://www.googleapis.com/youtube/v3/videos');
+  statsUrl.searchParams.set('part', 'statistics');
+  statsUrl.searchParams.set('id', ids);
+  statsUrl.searchParams.set('key', CONFIG.YOUTUBE_API_KEY);
+
+  const statsRes = await fetch(statsUrl);
+  const statsData = statsRes.ok ? await statsRes.json() : { items: [] };
+  const statsById = {};
+  for (const v of (statsData.items || [])) statsById[v.id] = v.statistics || {};
+
+  return items.map(item => {
+    const vid  = item.id.videoId;
+    const snip = item.snippet;
+    const s    = statsById[vid] || {};
+    return {
+      source:     'youtube',
+      title:      snip.title,
+      channel:    snip.channelTitle,
+      url:        `https://www.youtube.com/watch?v=${vid}`,
+      date:       snip.publishedAt,
+      views:      Number(s.viewCount  || 0),
+      likes:      Number(s.likeCount  || 0),
+      comments:   Number(s.commentCount || 0),
+      engagement: Number(s.viewCount || 0) + Number(s.likeCount || 0) * 10,
+      thumbnail:  snip.thumbnails?.default?.url || '',
+    };
+  });
+}
+
+// ─────────────────────────────────────────────
+// X (Twitter) via CORS proxy
+// ─────────────────────────────────────────────
+async function fetchX(keyword) {
+  if (!CONFIG.X_BEARER_TOKEN) throw new Error('X Bearer Token not set in CONFIG.');
+
+  const target = encodeURIComponent(
+    'https://api.twitter.com/2/tweets/search/recent' +
+    `?query=${encodeURIComponent(keyword + ' -is:retweet lang:en')}` +
+    '&max_results=20' +
+    '&tweet.fields=created_at,public_metrics,author_id' +
+    '&expansions=author_id' +
+    '&user.fields=username'
+  );
+
+  // Try allorigins first, fall back to corsproxy.io
+  const proxies = [
+    `https://api.allorigins.win/get?url=${target}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(decodeURIComponent(target))}`,
+  ];
+
+  let data;
+  for (const proxyUrl of proxies) {
+    try {
+      const res = await fetch(proxyUrl, {
+        headers: { 'Authorization': `Bearer ${CONFIG.X_BEARER_TOKEN}` }
+      });
+      if (!res.ok) continue;
+      const wrapper = await res.json();
+      // allorigins wraps in { contents: '...' }
+      data = typeof wrapper.contents === 'string' ? JSON.parse(wrapper.contents) : wrapper;
+      if (data?.data) break;
+    } catch { /* try next proxy */ }
+  }
+
+  if (!data?.data) {
+    throw new Error(
+      'X API request failed. CORS proxies may be unavailable or your Bearer Token is invalid. ' +
+      'Consider running a small backend proxy for production use.'
+    );
+  }
+
+  const users = {};
+  for (const u of (data.includes?.users || [])) users[u.id] = u.username;
+
+  return (data.data || []).map(tweet => {
+    const m = tweet.public_metrics || {};
+    const engagement = (m.like_count || 0) + (m.retweet_count || 0) +
+                       (m.reply_count || 0) + (m.quote_count || 0);
+    const username = users[tweet.author_id] || 'unknown';
+    return {
+      source:     'x',
+      title:      tweet.text,
+      url:        `https://twitter.com/${username}/status/${tweet.id}`,
+      date:       tweet.created_at,
+      likes:      m.like_count     || 0,
+      retweets:   m.retweet_count  || 0,
+      replies:    m.reply_count    || 0,
+      quotes:     m.quote_count    || 0,
+      engagement,
+    };
+  });
+}
+
+// ─────────────────────────────────────────────
+// Render cards
+// ─────────────────────────────────────────────
+function renderCards(posts) {
+  const grid = document.getElementById('results-grid');
+  grid.innerHTML = '';
+
+  for (const p of posts) {
+    const isYT = p.source === 'youtube';
+    const badge = isYT
+      ? `<span class="platform-badge badge-yt">
+           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.75 15.5v-7l6.25 3.5-6.25 3.5z"/></svg>
+           YouTube
+         </span>`
+      : `<span class="platform-badge badge-x">
+           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+           X
+         </span>`;
+
+    const metrics = isYT
+      ? `<span class="metric">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+           ${fmtNum(p.views)}
+         </span>
+         <span class="metric">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+           ${fmtNum(p.likes)}
+         </span>
+         <span class="metric">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+           ${fmtNum(p.comments)}
+         </span>`
+      : `<span class="metric">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+           ${fmtNum(p.likes)}
+         </span>
+         <span class="metric">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+           ${fmtNum(p.retweets)}
+         </span>
+         <span class="metric">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+           ${fmtNum(p.replies)}
+         </span>`;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-header">
+        ${badge}
+      </div>
+      <div class="card-title">${escHtml(p.title)}</div>
+      <div class="card-meta">${metrics}</div>
+      ${p.date ? `<div class="card-date">${fmtDate(p.date)}</div>` : ''}
+      <a class="card-link" href="${escHtml(p.url)}" target="_blank" rel="noopener">
+        Open
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>`;
+    grid.appendChild(card);
+  }
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────
+// Search handler
+// ─────────────────────────────────────────────
+async function handleSearch() {
+  const keyword = document.getElementById('keyword').value.trim();
+  if (!keyword) { setStatus(alert('error', 'Please enter a keyword.')); return; }
+
+  const wantYT = document.getElementById('chk-yt').checked;
+  const wantX  = document.getElementById('chk-x').checked;
+  if (!wantYT && !wantX) { setStatus(alert('error', 'Select at least one platform.')); return; }
+
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  document.getElementById('search-label').textContent = 'Searching…';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('analyze-section').classList.remove('visible');
+  document.getElementById('analysis-output').classList.remove('visible');
+  collectedPosts = [];
+
+  let statusHtml = '';
+  const messages = [];
+
+  // Show loading spinners per platform
+  const spinners = [];
+  if (wantYT) spinners.push(spinner('Fetching YouTube videos…'));
+  if (wantX)  spinners.push(spinner('Fetching X posts…'));
+  setStatus(spinners.join(''));
+
+  const results = await Promise.allSettled([
+    wantYT ? fetchYouTube(keyword) : Promise.resolve([]),
+    wantX  ? fetchX(keyword)       : Promise.resolve([]),
+  ]);
+
+  const [ytResult, xResult] = results;
+
+  if (wantYT) {
+    if (ytResult.status === 'fulfilled') {
+      collectedPosts.push(...ytResult.value);
+      messages.push(alert('info', `✓ YouTube: ${ytResult.value.length} videos found.`));
+    } else {
+      messages.push(alert('error', `YouTube error: ${ytResult.reason?.message || ytResult.reason}`));
+    }
+  }
+
+  if (wantX) {
+    if (xResult.status === 'fulfilled') {
+      collectedPosts.push(...xResult.value);
+      messages.push(alert('info', `✓ X: ${xResult.value.length} posts found.`));
+    } else {
+      messages.push(alert('warn', `X error: ${xResult.reason?.message || xResult.reason}`));
+    }
+  }
+
+  setStatus(messages.join(''));
+  btn.disabled = false;
+  document.getElementById('search-label').textContent = 'Search';
+
+  if (!collectedPosts.length) return;
+
+  collectedPosts.sort((a, b) => b.engagement - a.engagement);
+
+  document.getElementById('results-count').innerHTML =
+    `<strong>${collectedPosts.length}</strong> results for "<strong>${escHtml(keyword)}</strong>"`;
+  document.getElementById('results-section').style.display = 'block';
+  renderCards(collectedPosts);
+  document.getElementById('analyze-section').classList.add('visible');
+}
+
+// ─────────────────────────────────────────────
+// Analyze handler (Claude)
+// ─────────────────────────────────────────────
+async function handleAnalyze() {
+  if (!collectedPosts.length) return;
+  if (!CONFIG.ANTHROPIC_API_KEY) {
+    setStatus(alert('error', 'Anthropic API key not set in CONFIG.'));
+    return;
+  }
+
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+
+  const out = document.getElementById('analysis-output');
+  const body = document.getElementById('analysis-body');
+  out.classList.add('visible');
+  body.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><span>Claude is analyzing the data…</span></div>';
+
+  const keyword = document.getElementById('keyword').value.trim();
+  const summary = collectedPosts.map(p =>
+    `[${p.source.toUpperCase()}] "${p.title}" | engagement: ${p.engagement} | url: ${p.url} | date: ${p.date || 'n/a'}`
+  ).join('\n');
+
+  const prompt = `You are a marketing analyst. Here is social media data for the keyword "${keyword}":
+
+${summary}
+
+Analyze this data and provide:
+### Top Trending Themes
+- List 3-5 dominant themes and topics appearing across platforms.
+
+### Audience Sentiment
+- Describe the overall tone and sentiment of the content.
+
+### Best-Performing Content Formats
+- What types of content (style, length, format) are getting the most engagement?
+
+### Actionable Marketing Recommendations
+- Give 3-5 concrete recommendations for a brand wanting to capitalize on these trends.
+
+Keep each section concise and practical.`;
+
+  try {
+    // Anthropic API also requires a CORS proxy from the browser
+    const proxyBase = 'https://corsproxy.io/?url=';
+    const targetUrl = 'https://api.anthropic.com/v1/messages';
+
+    const res = await fetch(proxyBase + encodeURIComponent(targetUrl), {
+      method: 'POST',
+      headers: {
+        'Content-Type':         'application/json',
+        'x-api-key':            CONFIG.ANTHROPIC_API_KEY,
+        'anthropic-version':    '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model:      'claude-haiku-4-5',
+        max_tokens: 1024,
+        messages:   [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Claude API error (${res.status})`);
+    }
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '(no response)';
+    body.innerHTML = `<div class="analysis-body">${simpleMarkdown(escHtml(text))}</div>`;
+
+  } catch (err) {
+    body.innerHTML = `<div class="alert alert-error">Claude analysis failed: ${escHtml(err.message)}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✦ Analyze Trends with Claude';
+}
+
+// Allow Enter key to trigger search
+document.getElementById('keyword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleSearch();
+});
+</script>
+
+</body>
+</html>
